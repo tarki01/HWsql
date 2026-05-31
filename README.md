@@ -35,7 +35,7 @@
 | СУБД | PostgreSQL (latest) |
 | Контейнеризация | Docker + Docker Compose |
 | Язык запросов | SQL (CTE, оконные функции, рекурсивные запросы) |
-| Клиенты | pgAdmin, DBeaver, DataGrip, psql |
+| Клиенты | pgAdmin, DBeaver, psql |
 
 ---
 
