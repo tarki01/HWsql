@@ -1,14 +1,12 @@
--- Задание 1 +
+-- Задание 1 ----------------------------------------------------------------------------------------------------------------
 
 WITH RECURSIVE employee_hierarchy AS (
     SELECT
         emp.employeeid,
         emp.managerid,
-        dep.departmentid,
-        rol.roleid
+        emp.departmentid,
+        emp.roleid
     FROM employees emp
-    JOIN roles rol ON rol.roleid = emp.roleid
-    JOIN departments dep ON emp.departmentid = dep.departmentid
     WHERE emp.employeeid = 1
 
     UNION ALL
@@ -16,129 +14,146 @@ WITH RECURSIVE employee_hierarchy AS (
     SELECT
         emp.employeeid,
         emp.managerid,
-        dep.departmentid,
-        rol.roleid
+        emp.departmentid,
+        emp.roleid
     FROM employees emp
-    JOIN roles rol ON rol.roleid = emp.roleid
-    JOIN departments dep ON emp.departmentid = dep.departmentid
     JOIN employee_hierarchy hier ON emp.managerid = hier.employeeid
+),
+employee_projects AS (
+    SELECT DISTINCT
+        t.assignedto AS employeeid,
+        p.projectname
+    FROM tasks t
+    JOIN projects p ON t.projectid = p.projectid
+),
+employee_tasks AS (
+    SELECT
+        t.assignedto AS employeeid,
+        STRING_AGG(t.taskname, ', ' ORDER BY t.taskname) AS task_names
+    FROM tasks t
+    GROUP BY t.assignedto
 )
 SELECT
     hier.employeeid,
-    emp.name,
+    e.name,
     hier.managerid,
-    dep.departmentname,
-    rol.rolename,
-    STRING_AGG(DISTINCT proj.projectname, ', ') AS project_names,
-    STRING_AGG(task.taskname, ', ') AS task_names
+    d.departmentname,
+    r.rolename,
+    (SELECT STRING_AGG(DISTINCT ep.projectname, ', ')
+     FROM employee_projects ep WHERE ep.employeeid = hier.employeeid) AS project_names,
+    et.task_names
 FROM employee_hierarchy hier
-JOIN employees emp ON hier.employeeid = emp.employeeid
-LEFT JOIN departments dep ON dep.departmentid = hier.departmentid
-JOIN roles rol ON rol.roleid = hier.roleid
-LEFT JOIN projects proj ON proj.departmentid = hier.departmentid
-LEFT JOIN tasks task ON task.assignedto = hier.employeeid AND task.projectid = proj.projectid
-GROUP BY
-    hier.employeeid,
-    emp.name,
-    hier.managerid,
-    dep.departmentid,
-    rol.roleid
-ORDER BY emp.name;
+JOIN employees e ON hier.employeeid = e.employeeid
+LEFT JOIN departments d ON hier.departmentid = d.departmentid
+LEFT JOIN roles r ON e.roleid = r.roleid
+LEFT JOIN employee_tasks et ON hier.employeeid = et.employeeid
+ORDER BY e.name;
 
--- Задание 2 +
+-- Задание 2 ----------------------------------------------------------------------------------------------------------------
 
-WITH RECURSIVE employeehierarchy AS (
-
-    SELECT e.employeeid, e.managerid, d.departmentid, r.roleid
-    FROM employees e
-             join roles r on r.roleid = e.roleid
-             join departments d on e.departmentid = d.departmentid
+WITH RECURSIVE employee_hierarchy AS (
+    SELECT employeeid, managerid, departmentid, roleid
+    FROM employees
     WHERE employeeid = 1
 
     UNION ALL
 
-    SELECT e.employeeid, e.managerid, d.departmentid, r.roleid
-
+    SELECT e.employeeid, e.managerid, e.departmentid, e.roleid
     FROM employees e
-             join roles r on r.roleid = e.roleid
-             join departments d on e.departmentid = d.departmentid
-             join employeehierarchy eh on e.managerid = eh.employeeid
-)
-select eh.employeeid, e.name, eh.managerid, d.departmentname, r.rolename,
-       string_agg(DISTINCT p.projectname, ',') as ProjectNames, string_agg(t.taskname, ',') as TaskNames,
-       count(t.taskname) as TotalTasks, coalesce(tt.TotalSubordinates, 0)
-from employeehierarchy eh
-         join employees e on eh.employeeid = e.employeeid
-         join departments d on d.departmentid = eh.departmentid
-         join roles r on r.roleid = eh.roleid
-         LEFT join projects p on p.departmentid = eh.departmentid
-         LEFT join tasks t on t.assignedto = eh.employeeid and t.projectid = p.projectid
-         LEFT join (
-            select e.managerid, count(eh.employeeid) as TotalSubordinates
-            from employees e join employeehierarchy eh on eh.employeeid = e.employeeid
-            where e.managerid IS NOT NULL
-            group by e.managerid
-
-        ) tt on e.employeeid = tt.managerid
-group by eh.employeeid, e.name, eh.managerid, d.departmentid, r.roleid, tt.TotalSubordinates
-order by e.name;
-
--- Задание 3 +
-
-WITH RECURSIVE employee_hierarchy AS (
+    JOIN employee_hierarchy eh ON e.managerid = eh.employeeid
+),
+employee_projects AS (
+    SELECT DISTINCT
+        t.assignedto AS employeeid,
+        p.projectname
+    FROM tasks t
+    JOIN projects p ON t.projectid = p.projectid
+),
+employee_tasks AS (
     SELECT
-        emp.employeeid,
-        emp.managerid,
-        dep.departmentid,
-        rol.roleid
-    FROM employees emp
-    JOIN roles rol ON rol.roleid = emp.roleid
-    JOIN departments dep ON emp.departmentid = dep.departmentid
-    WHERE emp.employeeid = 1
-
-    UNION ALL
-
-    SELECT
-        emp.employeeid,
-        emp.managerid,
-        dep.departmentid,
-        rol.roleid
-    FROM employees emp
-    JOIN roles rol ON rol.roleid = emp.roleid
-    JOIN departments dep ON emp.departmentid = dep.departmentid
-    JOIN employee_hierarchy hier ON emp.managerid = hier.employeeid
+        t.assignedto AS employeeid,
+        STRING_AGG(t.taskname, ', ' ORDER BY t.taskname) AS task_names,
+        COUNT(*) AS total_tasks
+    FROM tasks t
+    GROUP BY t.assignedto
+),
+subordinates_count AS (
+    SELECT managerid, COUNT(*) AS total_subordinates
+    FROM employees
+    WHERE managerid IS NOT NULL
+    GROUP BY managerid
 )
 SELECT
-    hier.employeeid,
-    emp.name,
-    hier.managerid,
-    dep.departmentname,
-    rol.rolename,
-    STRING_AGG(DISTINCT proj.projectname, ',') AS ProjectNames,
-    STRING_AGG(task.taskname, ',') AS TaskNames,
-    COALESCE(sub.TotalSubordinates, 0) AS TotalSubordinates
-FROM employee_hierarchy hier
-JOIN employees emp ON hier.employeeid = emp.employeeid
-JOIN departments dep ON dep.departmentid = hier.departmentid
-JOIN roles rol ON rol.roleid = hier.roleid
-LEFT JOIN projects proj ON proj.departmentid = hier.departmentid
-LEFT JOIN tasks task ON task.assignedto = hier.employeeid AND task.projectid = proj.projectid
-LEFT JOIN (
+    eh.employeeid,
+    e.name,
+    eh.managerid,
+    d.departmentname,
+    r.rolename,
+    (SELECT STRING_AGG(DISTINCT ep.projectname, ', ')
+     FROM employee_projects ep WHERE ep.employeeid = eh.employeeid) AS project_names,
+    et.task_names,
+    et.total_tasks,
+    COALESCE(sc.total_subordinates, 0) AS total_subordinates
+FROM employee_hierarchy eh
+JOIN employees e ON eh.employeeid = e.employeeid
+LEFT JOIN departments d ON eh.departmentid = d.departmentid
+LEFT JOIN roles r ON e.roleid = r.roleid
+LEFT JOIN employee_tasks et ON eh.employeeid = et.employeeid
+LEFT JOIN subordinates_count sc ON eh.employeeid = sc.managerid
+ORDER BY e.name;
+
+-- Задание 3 ----------------------------------------------------------------------------------------------------------------
+
+WITH RECURSIVE subordinates_count AS (
+    SELECT managerid, COUNT(*) AS total_subordinates
+    FROM (
+        WITH RECURSIVE all_subs AS (
+            SELECT employeeid, managerid
+            FROM employees
+            WHERE managerid IS NOT NULL
+
+            UNION ALL
+
+            SELECT e.employeeid, e.managerid
+            FROM employees e
+            JOIN all_subs a ON e.managerid = a.employeeid
+        )
+        SELECT * FROM all_subs
+    ) AS all_relationships
+    GROUP BY managerid
+),
+employee_projects AS (
+    SELECT DISTINCT
+        t.assignedto AS employeeid,
+        p.projectname
+    FROM tasks t
+    JOIN projects p ON t.projectid = p.projectid
+),
+employee_tasks AS (
     SELECT
-        emp.managerid,
-        COUNT(hier.employeeid) AS TotalSubordinates
-    FROM employees emp
-    JOIN employee_hierarchy hier ON hier.employeeid = emp.employeeid
-    WHERE emp.managerid IS NOT NULL
-    GROUP BY emp.managerid
-) sub ON emp.employeeid = sub.managerid
-WHERE COALESCE(sub.TotalSubordinates, 0) > 0
-  AND rol.rolename = 'Менеджер'
-GROUP BY
-    hier.employeeid,
-    emp.name,
-    hier.managerid,
-    dep.departmentid,
-    rol.roleid,
-    sub.TotalSubordinates
-ORDER BY emp.name;
+        t.assignedto AS employeeid,
+        STRING_AGG(t.taskname, ', ' ORDER BY t.taskname) AS task_names,
+        COUNT(*) AS total_tasks
+    FROM tasks t
+    GROUP BY t.assignedto
+)
+SELECT
+    e.employeeid,
+    e.name,
+    e.managerid,
+    d.departmentname,
+    r.rolename,
+    (SELECT STRING_AGG(DISTINCT ep.projectname, ', ')
+     FROM employee_projects ep WHERE ep.employeeid = e.employeeid) AS project_names,
+    et.task_names,
+    COALESCE(sc.total_subordinates, 0) AS total_subordinates
+FROM employees e
+LEFT JOIN departments d ON e.departmentid = d.departmentid
+LEFT JOIN roles r ON e.roleid = r.roleid
+LEFT JOIN employee_tasks et ON e.employeeid = et.employeeid
+LEFT JOIN subordinates_count sc ON e.employeeid = sc.managerid
+WHERE r.rolename = 'Менеджер'
+  AND COALESCE(sc.total_subordinates, 0) > 0
+ORDER BY e.name;
+
+-----------------------------------------------------------------------------------------------------------------------------

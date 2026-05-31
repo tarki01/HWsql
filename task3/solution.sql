@@ -1,4 +1,4 @@
--- Задание 1 ---------------------------------------------------------------------------------------------------------------- +
+-- Задание 1 ----------------------------------------------------------------------------------------------------------------
 
 WITH customer_bookings AS (
     -- Получаем данные о бронированиях клиентов с информацией об отелях
@@ -29,7 +29,6 @@ customer_stats AS (
     FROM customer_bookings
     GROUP BY ID_customer, name, email, phone
 )
--- Выбираем клиентов с более чем двумя бронированиями в разных отелях
 SELECT
     name,
     email,
@@ -42,10 +41,9 @@ WHERE total_bookings > 2
   AND unique_hotels > 1
 ORDER BY total_bookings DESC;
 
--- Задание 2 ---------------------------------------------------------------------------------------------------------------- +
+-- Задание 2 ----------------------------------------------------------------------------------------------------------------
 
 WITH customer_analytics AS (
-    -- Базовый анализ по каждому клиенту
     SELECT
         c.ID_customer,
         c.name,
@@ -59,7 +57,6 @@ WITH customer_analytics AS (
     GROUP BY c.ID_customer, c.name
 ),
 customers_multi_bookings AS (
-    -- Клиенты с >2 бронированиями в разных отелях
     SELECT
         ID_customer,
         name,
@@ -71,7 +68,6 @@ customers_multi_bookings AS (
       AND unique_hotels > 1
 ),
 customers_high_spenders AS (
-    -- Клиенты, потратившие > 500 долларов
     SELECT
         ID_customer,
         name,
@@ -81,7 +77,6 @@ customers_high_spenders AS (
     FROM customer_analytics
     WHERE total_spent > 500
 )
--- Объединяем клиентов, которые соответствуют ОБОИМ условиям
 SELECT
     ID_customer,
     name,
@@ -92,10 +87,9 @@ FROM customers_multi_bookings
 WHERE ID_customer IN (SELECT ID_customer FROM customers_high_spenders)
 ORDER BY total_spent ASC;
 
--- Задание 3 ---------------------------------------------------------------------------------------------------------------- +
+-- Задание 3 ----------------------------------------------------------------------------------------------------------------
 
 WITH hotel_categories AS (
-    -- Категоризация отелей на основе средней стоимости номера
     SELECT
         h.ID_hotel,
         h.name AS hotel_name,
