@@ -64,3 +64,60 @@ docker-compose up -d
 
 # 3. Проверьте статус
 docker ps | grep postgres_session
+
+## Структура базы данных
+
+Проект включает четыре независимые подсистемы:
+
+---
+
+### 1. Транспортные средства (Vehicle)
+
+| Таблица | Назначение | Ключи |
+|---------|------------|-------|
+| `Vehicle` | Производители и модели | PK: `model` |
+| `Car` | Автомобили (VIN, объем, мощность, цена, КПП) | PK: `vin`, FK: `model` |
+| `Motorcycle` | Мотоциклы (VIN, объем, мощность, цена, тип) | PK: `vin`, FK: `model` |
+| `Bicycle` | Велосипеды (серийник, передачи, цена, тип) | PK: `serial_number`, FK: `model` |
+
+**Типы:** Car (`Automatic`/`Manual`), Motorcycle (`Sport`/`Cruiser`/`Touring`), Bicycle (`Mountain`/`Road`/`Hybrid`)
+
+---
+
+### 2. Гоночные автомобили (Racing)
+
+| Таблица | Назначение | Ключи |
+|---------|------------|-------|
+| `Classes` | Классы автомобилей (тип, страна, двери, двигатель, вес) | PK: `class` |
+| `Cars` | Автомобили (название, класс, год) | PK: `name`, FK: `class` |
+| `Races` | Гоночные события (название, дата) | PK: `name` |
+| `Results` | Результаты (позиция) | PK: (`car`, `race`), FK: `car`, `race` |
+
+---
+
+### 3. Гостиничные бронирования (Hotel Booking)
+
+| Таблица | Назначение | Ключи |
+|---------|------------|-------|
+| `Hotel` | Отели (название, расположение) | PK: `ID_hotel` |
+| `Room` | Номера (тип, цена, вместимость) | PK: `ID_room`, FK: `ID_hotel` |
+| `Customer` | Клиенты (имя, email, телефон) | PK: `ID_customer` |
+| `Booking` | Бронирования (даты заезда/выезда) | PK: `ID_booking`, FK: `ID_room`, `ID_customer` |
+
+**Типы номеров:** `Single`, `Double`, `Suite`
+
+---
+
+### 4. Управление персоналом (HR)
+
+| Таблица | Назначение | Ключи |
+|---------|------------|-------|
+| `Departments` | Отделы компании | PK: `DepartmentID` |
+| `Roles` | Роли сотрудников | PK: `RoleID` |
+| `Employees` | Сотрудники (имя, должность, иерархия) | PK: `EmployeeID`, FK: `ManagerID`, `DepartmentID`, `RoleID` |
+| `Projects` | Проекты (даты начала/окончания) | PK: `ProjectID`, FK: `DepartmentID` |
+| `Tasks` | Задачи (название, исполнитель) | PK: `TaskID`, FK: `AssignedTo`, `ProjectID` |
+
+**Иерархия:** поле `ManagerID` ссылается на `EmployeeID` (самоссылка)
+
+---
