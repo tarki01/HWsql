@@ -1,4 +1,4 @@
-# 🐘 PostgreSQL Multi-Domain Database Project
+# 🐘 Домашняя работа по SQL 
 
 ## 📋 Оглавление
 
